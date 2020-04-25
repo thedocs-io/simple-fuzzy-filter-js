@@ -1,287 +1,295 @@
-import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem} from "../src/simple-fuzzy-filter-js"
+import SimpleFuzzyFilter, { SimpleFuzzyFilterHighlightItem } from '../src/simple-fuzzy-filter-js'
 
 type Note = {
     key: string
 }
 
 type DataSetToCheck = {
-    keys: string[], query: string, highlightExpected: string;
+    keys: string[]
+    query: string
+    expect: {
+        highlight: string
+        isSameOrder?: boolean
+    }[]
 }
 
-describe("SimpleFuzzyFilter test", () => {
-
-    const assert = (keys: string[], query: string, highlightExpected: string) => {
-        const notes = keys.map(key => {
-            return {key: key}
-        }) as Note[];
+describe('SimpleFuzzyFilter test', () => {
+    const assert = (dataSetToCheck: DataSetToCheck) => {
+        const notes = dataSetToCheck.keys.map(key => {
+            return { key: key }
+        }) as Note[]
 
         const filter = new SimpleFuzzyFilter<Note>({
             items: notes,
-            textProvider: item => item.key,
-        });
+            textProvider: item => item.key
+        })
 
         const highlight = (items: SimpleFuzzyFilterHighlightItem[]) => {
-            let answer = "";
+            let answer = ''
 
             items.forEach(item => {
                 if (item.isMatched) {
-                    answer += "[" + item.text + "]";
+                    answer += '[' + item.text + ']'
                 } else {
-                    answer += item.text;
+                    answer += item.text
                 }
-            });
+            })
 
-            return answer;
-        };
+            return answer
+        }
 
-        expect(query + ":" + filter.filterAndHighlight(query).map(item => highlight(item.highlight)).join(", ")).toBe(query + ":" + highlightExpected);
-    };
+        const query = dataSetToCheck.query
+        const answer = filter.filter(query)
 
-    it("query not matches: simple case", () => {
+        expect(query + ':' + answer.map(item => highlight(item.highlight) + ':' + item.isSameOrder).join(', ')).toBe(
+            query + ':' + dataSetToCheck.expect.map(item => item.highlight + ':' + (item.isSameOrder == null ? true : item.isSameOrder)).join(', ')
+        )
+    }
+
+    it('query not matches: simple case', () => {
         const itemsToCheck = [
             {
-                keys: ["hello world"],
-                query: "hellow",
-                highlightExpected: ""
+                keys: ['hello world'],
+                query: 'hellow',
+                expect: []
             },
             {
-                keys: ["hello world"],
-                query: "word",
-                highlightExpected: ""
+                keys: ['hello world'],
+                query: 'word',
+                expect: []
             },
             {
-                keys: ["helloworld"],
-                query: "hello world",
-                highlightExpected: ""
+                keys: ['helloworld'],
+                query: 'hello world',
+                expect: []
             },
             {
-                keys: ["helloWorld"],
-                query: "helloworld",
-                highlightExpected: ""
+                keys: ['helloWorld'],
+                query: 'helloworld',
+                expect: []
             },
             {
-                keys: ["helloWorld"],
-                query: "hel orld",
-                highlightExpected: ""
+                keys: ['helloWorld'],
+                query: 'hel orld',
+                expect: []
             },
             {
-                keys: ["helloWorld"],
-                query: "l",
-                highlightExpected: ""
+                keys: ['helloWorld'],
+                query: 'l',
+                expect: []
             },
             {
-                keys: ["hello world"],
-                query: "hello again",
-                highlightExpected: ""
+                keys: ['hello world'],
+                query: 'hello again',
+                expect: []
             },
             {
-                keys: ["hello world"],
-                query: "justWord",
-                highlightExpected: ""
+                keys: ['hello world'],
+                query: 'justWord',
+                expect: []
             },
             {
-                keys: ["hello world"],
-                query: "ello world",
-                highlightExpected: ""
-            },
-        ] as DataSetToCheck[];
+                keys: ['hello world'],
+                query: 'ello world',
+                expect: []
+            }
+        ] as DataSetToCheck[]
 
         itemsToCheck.forEach(item => {
-            assert(item.keys, item.query, item.highlightExpected);
+            assert(item)
         })
-    });
+    })
 
-    it("query matches: single word", () => {
+    it('query matches: single word', () => {
         const itemsToCheck = [
             {
-                keys: ["hello world"],
-                query: "hel",
-                highlightExpected: "[hel]lo world"
+                keys: ['hello world'],
+                query: 'hel',
+                expect: [{ highlight: '[hel]lo world' }]
             },
             {
-                keys: ["hello world"],
-                query: "Hel",
-                highlightExpected: "[hel]lo world"
+                keys: ['hello world'],
+                query: 'Hel',
+                expect: [{ highlight: '[hel]lo world' }]
             },
             {
-                keys: ["helloworld"],
-                query: "hel",
-                highlightExpected: "[hel]loworld"
+                keys: ['helloworld'],
+                query: 'hel',
+                expect: [{ highlight: '[hel]loworld' }]
             },
             {
-                keys: ["helloWorld"],
-                query: "hel",
-                highlightExpected: "[hel]loWorld"
+                keys: ['helloWorld'],
+                query: 'hel',
+                expect: [{ highlight: '[hel]loWorld' }]
             },
             {
-                keys: ["helloWorld"],
-                query: "hel",
-                highlightExpected: "[hel]loWorld"
+                keys: ['helloWorld'],
+                query: 'hel',
+                expect: [{ highlight: '[hel]loWorld' }]
             },
             {
-                keys: ["helloWorld"],
-                query: "hello",
-                highlightExpected: "[hello]World"
+                keys: ['helloWorld'],
+                query: 'hello',
+                expect: [{ highlight: '[hello]World' }]
             },
             {
-                keys: ["helloWorld"],
-                query: "wo",
-                highlightExpected: "hello[Wo]rld"
+                keys: ['helloWorld'],
+                query: 'wo',
+                expect: [{ highlight: 'hello[Wo]rld' }]
             },
             {
-                keys: ["hello-world"],
-                query: "wo",
-                highlightExpected: "hello-[wo]rld"
+                keys: ['hello-world'],
+                query: 'wo',
+                expect: [{ highlight: 'hello-[wo]rld' }]
             },
             {
-                keys: ["hello world"],
-                query: "wo",
-                highlightExpected: "hello [wo]rld"
+                keys: ['hello world'],
+                query: 'wo',
+                expect: [{ highlight: 'hello [wo]rld' }]
             },
             {
-                keys: ["HELLO WORLD"],
-                query: "hel",
-                highlightExpected: "[HEL]LO WORLD"
+                keys: ['HELLO WORLD'],
+                query: 'hel',
+                expect: [{ highlight: '[HEL]LO WORLD' }]
             },
             {
-                keys: ["HELLO_WORLD"],
-                query: "hel",
-                highlightExpected: "[HEL]LO_WORLD"
+                keys: ['HELLO_WORLD'],
+                query: 'hel',
+                expect: [{ highlight: '[HEL]LO_WORLD' }]
             },
             {
-                keys: ["HELLO-WORLD"],
-                query: "wo",
-                highlightExpected: "HELLO-[WO]RLD"
+                keys: ['HELLO-WORLD'],
+                query: 'wo',
+                expect: [{ highlight: 'HELLO-[WO]RLD' }]
             },
             {
-                keys: ["HELLO-WORLD"],
-                query: "world",
-                highlightExpected: "HELLO-[WORLD]"
+                keys: ['HELLO-WORLD'],
+                query: 'world',
+                expect: [{ highlight: 'HELLO-[WORLD]' }]
             },
             {
-                keys: ["helloWorld"],
-                query: "HELLO",
-                highlightExpected: "[hello]World"
-            },
-        ] as DataSetToCheck[];
+                keys: ['helloWorld'],
+                query: 'HELLO',
+                expect: [{ highlight: '[hello]World' }]
+            }
+        ] as DataSetToCheck[]
 
         itemsToCheck.forEach(item => {
-            assert(item.keys, item.query, item.highlightExpected);
+            assert(item)
         })
-    });
+    })
 
-    it("query matches: multiple words", () => {
+    it('query matches: multiple words', () => {
         const itemsToCheck = [
             {
-                keys: ["hello world"],
-                query: "hel wor",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'hel wor',
+                expect: [{ highlight: '[hel]lo [wor]ld' }]
             },
             {
-                keys: ["hello world"],
-                query: "helWor",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'helWor',
+                expect: [{ highlight: '[hel]lo [wor]ld' }]
             },
             {
-                keys: ["hello world"],
-                query: "HelWor",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'HelWor',
+                expect: [{ highlight: '[hel]lo [wor]ld' }]
             },
             {
-                keys: ["hello world"],
-                query: "hel-Wor",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'hel-Wor',
+                expect: [{ highlight: '[hel]lo [wor]ld' }]
             },
             {
-                keys: ["hello world"],
-                query: "hel-World",
-                highlightExpected: "[hel]lo [world]"
+                keys: ['hello world'],
+                query: 'hel-World',
+                expect: [{ highlight: '[hel]lo [world]' }]
             },
             {
-                keys: ["HELLO world"],
-                query: "Hel WORLD",
-                highlightExpected: "[HEL]LO [world]"
+                keys: ['HELLO world'],
+                query: 'Hel WORLD',
+                expect: [{ highlight: '[HEL]LO [world]' }]
             },
             {
-                keys: ["HELLO_world"],
-                query: "Hel_WORLD",
-                highlightExpected: "[HEL]LO_[world]"
+                keys: ['HELLO_world'],
+                query: 'Hel_WORLD',
+                expect: [{ highlight: '[HEL]LO_[world]' }]
             },
             {
-                keys: ["HELLO_World"],
-                query: "Hel_WORLD",
-                highlightExpected: "[HEL]LO_[World]"
+                keys: ['HELLO_World'],
+                query: 'Hel_WORLD',
+                expect: [{ highlight: '[HEL]LO_[World]' }]
             },
             {
-                keys: ["hello world again"],
-                query: "hel wor-again",
-                highlightExpected: "[hel]lo [wor]ld [again]"
+                keys: ['hello world again'],
+                query: 'hel wor-again',
+                expect: [{ highlight: '[hel]lo [wor]ld [again]' }]
             },
 
             {
-                keys: ["hello world"],
-                query: "wor hel",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'wor hel',
+                expect: [{ highlight: '[hel]lo [wor]ld', isSameOrder: false }]
             },
             {
-                keys: ["hello world"],
-                query: "worHel",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'worHel',
+                expect: [{ highlight: '[hel]lo [wor]ld', isSameOrder: false }]
             },
             {
-                keys: ["hello world"],
-                query: "WorHel",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'WorHel',
+                expect: [{ highlight: '[hel]lo [wor]ld', isSameOrder: false }]
             },
             {
-                keys: ["hello world"],
-                query: "wor-Hel",
-                highlightExpected: "[hel]lo [wor]ld"
+                keys: ['hello world'],
+                query: 'wor-Hel',
+                expect: [{ highlight: '[hel]lo [wor]ld', isSameOrder: false }]
             },
             {
-                keys: ["hello world"],
-                query: "world-Hel",
-                highlightExpected: "[hel]lo [world]"
+                keys: ['hello world'],
+                query: 'world-Hel',
+                expect: [{ highlight: '[hel]lo [world]', isSameOrder: false }]
             },
             {
-                keys: ["HELLO world"],
-                query: "World HEL",
-                highlightExpected: "[HEL]LO [world]"
+                keys: ['HELLO world'],
+                query: 'World HEL',
+                expect: [{ highlight: '[HEL]LO [world]', isSameOrder: false }]
             },
             {
-                keys: ["HELLO_world"],
-                query: "World_HEL",
-                highlightExpected: "[HEL]LO_[world]"
+                keys: ['HELLO_world'],
+                query: 'World_HEL',
+                expect: [{ highlight: '[HEL]LO_[world]', isSameOrder: false }]
             },
             {
-                keys: ["HELLO_World"],
-                query: "World_HELLO",
-                highlightExpected: "[HELLO]_[World]"
+                keys: ['HELLO_World'],
+                query: 'World_HELLO',
+                expect: [{ highlight: '[HELLO]_[World]', isSameOrder: false }]
             },
             {
-                keys: ["HELLO_World_again"],
-                query: "World-aga_HELLO",
-                highlightExpected: "[HELLO]_[World]_[aga]in"
-            },
-        ] as DataSetToCheck[];
+                keys: ['HELLO_World_again'],
+                query: 'World-aga_HELLO',
+                expect: [{ highlight: '[HELLO]_[World]_[aga]in', isSameOrder: false }]
+            }
+        ] as DataSetToCheck[]
 
         itemsToCheck.forEach(item => {
-            assert(item.keys, item.query, item.highlightExpected);
+            assert(item)
         })
-    });
+    })
 
-    it("query matches: missing words", () => {
+    it('query matches: missing words', () => {
         const itemsToCheck = [
             {
-                keys: ["hello world again"],
-                query: "hel wor",
-                highlightExpected: "[hel]lo [wor]ld again"
-            },
-        ] as DataSetToCheck[];
+                keys: ['hello world again'],
+                query: 'hel wor',
+                expect: [{ highlight: '[hel]lo [wor]ld again' }]
+            }
+        ] as DataSetToCheck[]
 
         itemsToCheck.forEach(item => {
-            assert(item.keys, item.query, item.highlightExpected);
+            assert(item)
         })
-    });
-
-});
+    })
+})

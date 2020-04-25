@@ -1,201 +1,169 @@
-import 'core-js/features/array/map';
-import 'core-js/features/array/for-each';
-import {SimpleFuzzyFilterTokenizer} from "./simple-fuzzy-filter-tokenizer";
-import {
-    SimpleFuzzyFilterItemData,
-    SimpleFuzzyFilterItemsIndex
-} from "./simple-fuzzy-filter-items-index";
+import 'core-js/features/array/map'
+import 'core-js/features/array/for-each'
+import { SimpleFuzzyFilterTokenizer } from './simple-fuzzy-filter-tokenizer'
+import { SimpleFuzzyFilterItemData, SimpleFuzzyFilterItemsIndex } from './simple-fuzzy-filter-items-index'
 
-export type SimpleFuzzyFilterItemTextProvider<T> = (item: T) => string;
+export type SimpleFuzzyFilterItemTextProvider<T> = (item: T) => string
 
 export type SimpleFuzzyFilterHighlightItem = {
-    text: string;
-    isMatched: boolean;
+    text: string
+    isMatched: boolean
 }
 
 export type SimpleFuzzyFilterMatchedItem<T> = {
-    item: T;
+    item: T
     highlight: SimpleFuzzyFilterHighlightItem[]
+    isSameOrder: boolean
 }
 
 export type SimpleFuzzyFilterFilterOptions = {
-    highlight: boolean;
+    highlight: boolean
 }
 
 export type SimpleFuzzyFilterInitConfig<T> = {
-    textProvider: SimpleFuzzyFilterItemTextProvider<T>,
-    items?: T[];
-    initIndexOn?: "construct" | "first-filter";
+    textProvider: SimpleFuzzyFilterItemTextProvider<T>
+    items?: T[]
+    initIndexOn?: 'construct' | 'first-filter'
     tokenizer?: {
-        splitSymbols?: string[],
+        splitSymbols?: string[]
         splitByCase?: boolean
-    },
+    }
     filter?: {
         sameOrderFirst: boolean
     }
 }
 
 export default class SimpleFuzzyFilter<T> {
-
-    private textProvider: SimpleFuzzyFilterItemTextProvider<T>;
-    private tokenizer: SimpleFuzzyFilterTokenizer;
-    private index: SimpleFuzzyFilterItemsIndex<T> | null;
-    private itemsCached: T[];
+    private textProvider: SimpleFuzzyFilterItemTextProvider<T>
+    private tokenizer: SimpleFuzzyFilterTokenizer
+    private index_: SimpleFuzzyFilterItemsIndex<T>
 
     constructor(config: SimpleFuzzyFilterInitConfig<T>) {
-        config.tokenizer = config.tokenizer || {};
+        config.tokenizer = config.tokenizer || {}
 
-        this.textProvider = config.textProvider;
-        this.tokenizer = new SimpleFuzzyFilterTokenizer(config.tokenizer.splitSymbols, config.tokenizer.splitByCase);
-        this.itemsCached = [...config.items || []];
-        this.index = (config.initIndexOn == "construct") ? this.doInitIndex() : null;
-    }
+        this.textProvider = config.textProvider
+        this.tokenizer = new SimpleFuzzyFilterTokenizer(config.tokenizer.splitSymbols, config.tokenizer.splitByCase)
+        this.index_ = new SimpleFuzzyFilterItemsIndex<T>(this.textProvider, this.tokenizer, config.items || [])
 
-    filter(query: string): T[] {
-        return this.doFilter(query).map(i => i.item);
-    }
-
-    filterAndHighlight(query: string): SimpleFuzzyFilterMatchedItem<T>[] {
-        return this.doFilter(query);
-    }
-
-    add(item: T): void {
-        if (this.index) {
-            this.index.add(item);
-        } else {
-            this.itemsCached.push(item);
+        if (config.initIndexOn == 'construct') {
+            this.index_.indexedItems
         }
     }
 
-    addAll(items: T[]): void {
-        items.forEach(item => this.add(item));
+    get index(): SimpleFuzzyFilterItemsIndex<T> {
+        return this.index_
     }
 
-    remove(item: T): void {
-        if (this.index) {
-            this.index.remove(item);
-        } else {
-            const index = this.itemsCached.indexOf(item);
-
-            if (index >= 0) {
-                this.itemsCached.splice(index, 1);
-            }
-        }
-    }
-
-    removeAll(items: T[]): void {
-        items.forEach(item => this.remove(item));
-    }
-
-    private getIndex(): SimpleFuzzyFilterItemsIndex<T> {
-        if (this.index == null) {
-            return this.doInitIndex();
-        } else {
-            return this.index;
-        }
-
-    }
-
-    private doInitIndex(): SimpleFuzzyFilterItemsIndex<T> {
-        this.index = new SimpleFuzzyFilterItemsIndex<T>(this.textProvider, this.tokenizer);
-        this.index.addAll(this.itemsCached);
-        this.itemsCached = [];
-
-        return this.index;
+    filter(query: string): SimpleFuzzyFilterMatchedItem<T>[] {
+        return this.doFilter(query)
     }
 
     private doFilter(query: string): SimpleFuzzyFilterMatchedItem<T>[] {
-        const answer = [] as SimpleFuzzyFilterMatchedItem<T>[];
-        const queryTokens = this.getQueryTokens(query);
-        const items = this.getIndex().items;
+        const answer = [] as SimpleFuzzyFilterMatchedItem<T>[]
+        const queryTokens = this.getQueryTokens(query)
+        const items = this.index_.indexedItems
 
         items.forEach(item => {
-            const matched = this.doFilterItem(item, queryTokens);
+            const matched = this.doFilterItem(item, queryTokens)
 
             if (matched) {
-                answer.push({item: item.item, highlight: matched})
+                answer.push(matched)
             }
-        });
+        })
 
-        return answer;
+        return answer
     }
 
     private getQueryTokens(query: string): string[] {
-        const answer = [] as string[];
-        const tokenizedItems = this.tokenizer.tokenize(query);
+        const answer = [] as string[]
+        const tokenizedItems = this.tokenizer.tokenize(query)
 
         tokenizedItems.forEach(item => {
             if (item.isToken) {
-                answer.push(item.text.toUpperCase());
+                answer.push(item.text.toUpperCase())
             }
-        });
+        })
 
-        return answer;
+        return answer
     }
 
-    private doFilterItem(item: SimpleFuzzyFilterItemData<T>, queryTokens: string[]): SimpleFuzzyFilterHighlightItem[] | null {
-        const answer = [] as SimpleFuzzyFilterHighlightItem[];
-        const queryTokensMatched = {} as { [token: string]: boolean };
-        let currentText = "";
+    private doFilterItem(item: SimpleFuzzyFilterItemData<T>, queryTokens: string[]): SimpleFuzzyFilterMatchedItem<T> | null {
+        const highlight = [] as SimpleFuzzyFilterHighlightItem[]
+        const queryTokensMatched = {} as { [token: string]: boolean }
+        let currentText = ''
+        let lastMatchedToken: string = ''
+        let isSameOrder = true
 
         item.text.forEach(text => {
             if (text.isToken) {
-                let isTokenMatched = false;
+                let isTokenMatched = false
+                let tokenPrev: string = ''
 
                 queryTokens.forEach(token => {
                     if (!isTokenMatched) {
-                        const indexOf = text.text.toUpperCase().indexOf(token);
+                        const indexOf = text.text.toUpperCase().indexOf(token)
 
                         if (indexOf == 0) {
-                            isTokenMatched = true;
-                            queryTokensMatched[token] = true;
-
-                            if (currentText) {
-                                answer.push({
-                                    text: currentText,
-                                    isMatched: false
-                                });
+                            if (lastMatchedToken != tokenPrev) {
+                                isSameOrder = false
                             }
 
-                            answer.push({
+                            isTokenMatched = true
+                            queryTokensMatched[token] = true
+
+                            if (currentText) {
+                                highlight.push({
+                                    text: currentText,
+                                    isMatched: false
+                                })
+                            }
+
+                            highlight.push({
                                 text: text.text.substr(0, token.length),
                                 isMatched: true
-                            });
+                            })
 
-                            answer.push({
+                            highlight.push({
                                 text: text.text.substr(token.length),
                                 isMatched: false
-                            });
+                            })
 
-                            currentText = "";
+                            currentText = ''
+                            lastMatchedToken = token
                         }
                     }
-                });
+
+                    tokenPrev = token
+                })
 
                 if (!isTokenMatched) {
-                    answer.push({
+                    highlight.push({
                         text: currentText + text.text,
                         isMatched: false
-                    });
+                    })
 
-                    currentText = "";
+                    currentText = ''
                 }
             } else {
-                currentText += text.text;
+                currentText += text.text
             }
-        });
+        })
 
         if (currentText) {
-            answer.push({
+            highlight.push({
                 text: currentText,
                 isMatched: false
-            });
+            })
         }
 
         if (Object.keys(queryTokensMatched).length == queryTokens.length) {
-            return answer;
+            return {
+                item: item.item,
+                highlight: highlight,
+                isSameOrder: isSameOrder
+            }
         } else {
-            return null;
+            return null
         }
     }
 }
