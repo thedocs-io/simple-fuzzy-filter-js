@@ -22,15 +22,17 @@ export class SimpleFuzzyFilterItemsIndex<T> {
     ) {
         this.textProvider = textProvider;
         this.tokenizer = tokenizer;
-        this.itemsCached = [...itemsCached];
+        this.itemsCached = [];
         this.items_ = null;
+
+        itemsCached.forEach(item => this.itemsCached.push(item));
     }
 
     get items(): T[] {
         if (this.items_) {
             return this.items_.map(i => i.item);
         } else {
-            return [...this.itemsCached];
+            return this.itemsCached.map(i => i);
         }
     }
 
@@ -42,13 +44,23 @@ export class SimpleFuzzyFilterItemsIndex<T> {
         return this.items_;
     }
 
+    set(items: T[]): void {
+        this.reset();
+        this.addAll(items);
+    }
+
+    reset(): void {
+        if (this.items_) this.items_.length = 0;
+        if (this.itemsCached) this.itemsCached.length = 0;
+    }
+
     add(item: T): void {
         if (this.items_) {
             this.items_.push({
                 item: item,
                 text: this.tokenizer.tokenize(this.textProvider(item))
             });
-        } else{
+        } else {
             this.itemsCached.push(item);
         }
     }

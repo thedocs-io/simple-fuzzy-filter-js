@@ -9,7 +9,7 @@ export class SimpleFuzzyFilterTokenizer {
     private splitByCase: boolean;
 
     constructor(splitSymbols?: string[], splitByCase?: boolean) {
-        this.splitSymbols = splitSymbols || [" ", "\t",".", "-", "_", ","];
+        this.splitSymbols = splitSymbols || [" ", "\t", ".", "-", "_", ","];
         this.splitByCase = splitByCase || true;
     }
 

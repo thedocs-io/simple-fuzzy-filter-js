@@ -19,20 +19,17 @@ export type SimpleFuzzyFilterMatchedItem<T> = {
     isSameOrder: boolean
 }
 
-export type SimpleFuzzyFilterFilterOptions = {
-    highlight: boolean;
-}
-
 export type SimpleFuzzyFilterInitConfig<T> = {
     textProvider: SimpleFuzzyFilterItemTextProvider<T>,
     items?: T[];
     initIndexOn?: "construct" | "first-filter";
     tokenizer?: {
         splitSymbols?: string[],
-        splitByCase?: boolean
+        isSplitByCase?: boolean
     },
     filter?: {
-        sameOrderFirst: boolean
+        isSameOrderFirst?: boolean,
+        isSameOrderStrict?: boolean
     }
 }
 
@@ -41,13 +38,16 @@ export default class SimpleFuzzyFilter<T> {
     private textProvider: SimpleFuzzyFilterItemTextProvider<T>;
     private tokenizer: SimpleFuzzyFilterTokenizer;
     private index_: SimpleFuzzyFilterItemsIndex<T>;
+    private config: SimpleFuzzyFilterInitConfig<T>;
 
     constructor(config: SimpleFuzzyFilterInitConfig<T>) {
         config.tokenizer = config.tokenizer || {};
 
+        this.config = config;
         this.textProvider = config.textProvider;
-        this.tokenizer = new SimpleFuzzyFilterTokenizer(config.tokenizer.splitSymbols, config.tokenizer.splitByCase);
+        this.tokenizer = new SimpleFuzzyFilterTokenizer(config.tokenizer.splitSymbols, config.tokenizer.isSplitByCase);
         this.index_ = new SimpleFuzzyFilterItemsIndex<T>(this.textProvider, this.tokenizer, config.items || []);
+
 
         if (config.initIndexOn == "construct") {
             this.index_.indexedItems;
@@ -64,6 +64,7 @@ export default class SimpleFuzzyFilter<T> {
 
     private doFilter(query: string): SimpleFuzzyFilterMatchedItem<T>[] {
         const answer = [] as SimpleFuzzyFilterMatchedItem<T>[];
+        const answerRandomOrder = [] as SimpleFuzzyFilterMatchedItem<T>[];
         const queryTokens = this.getQueryTokens(query);
         const items = this.index_.indexedItems;
 
@@ -71,9 +72,21 @@ export default class SimpleFuzzyFilter<T> {
             const matched = this.doFilterItem(item, queryTokens);
 
             if (matched) {
-                answer.push(matched)
+                if (matched.isSameOrder) {
+                    answer.push(matched);
+                } else {
+                    if (!this.config.filter?.isSameOrderStrict) {
+                        if (this.config.filter?.isSameOrderFirst) {
+                            answerRandomOrder.push(matched);
+                        } else {
+                            answer.push(matched);
+                        }
+                    }
+                }
             }
         });
+
+        answerRandomOrder.forEach(item => answer.push(item));
 
         return answer;
     }

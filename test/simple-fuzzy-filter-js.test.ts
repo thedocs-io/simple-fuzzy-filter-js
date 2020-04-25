@@ -1,4 +1,4 @@
-import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem} from "../src/simple-fuzzy-filter-js"
+import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterInitConfig} from "../src/simple-fuzzy-filter-js"
 
 type Note = {
     key: string
@@ -15,15 +15,16 @@ type DataSetToCheck = {
 
 describe("SimpleFuzzyFilter test", () => {
 
-    const assert = (dataSetToCheck: DataSetToCheck) => {
+    const assert = (dataSetToCheck: DataSetToCheck, config?: SimpleFuzzyFilterInitConfig<Note>) => {
         const notes = dataSetToCheck.keys.map(key => {
             return {key: key}
         }) as Note[];
 
-        const filter = new SimpleFuzzyFilter<Note>({
-            items: notes,
-            textProvider: item => item.key,
-        });
+        config = config || {} as SimpleFuzzyFilterInitConfig<Note>;
+        config.items = notes;
+        config.textProvider = item => item.key;
+
+        const filter = new SimpleFuzzyFilter<Note>(config);
 
         const highlight = (items: SimpleFuzzyFilterHighlightItem[]) => {
             let answer = "";
@@ -279,6 +280,40 @@ describe("SimpleFuzzyFilter test", () => {
 
         itemsToCheck.forEach(item => {
             assert(item);
+        })
+    });
+
+    it("query matches: same order first", () => {
+        const itemsToCheck = [
+            {
+                keys: ["hello world", "world hello"],
+                query: "hel wor",
+                expect: [{highlight: "[hel]lo [wor]ld"}, {highlight: "[wor]ld [hel]lo", isSameOrder: false}]
+            },
+            {
+                keys: ["hello world", "world hello"],
+                query: "worHel",
+                expect: [{highlight: "[wor]ld [hel]lo"}, {highlight: "[hel]lo [wor]ld", isSameOrder: false}]
+            },
+            {
+                keys: ["hello planet mars", "world hello", "another abchello", "planet earth, hello"],
+                query: "hello",
+                expect: [{highlight: "[hello] planet mars"}, {highlight: "world [hello]"}, {highlight: "planet earth, [hello]"}]
+            },
+            {
+                keys: ["hello planet mars", "world hello", "another abchello", "planet earth, hello"],
+                query: "hello-Plan",
+                expect: [{highlight: "[hello] [plan]et mars"}, {highlight: "[plan]et earth, [hello]", isSameOrder: false}]
+            },
+            {
+                keys: ["hello planet mars", "world hello", "another abchello", "planet earth, hello"],
+                query: "plan, hello",
+                expect: [{highlight: "[plan]et earth, [hello]"}, {highlight: "[hello] [plan]et mars", isSameOrder: false}]
+            }
+        ] as DataSetToCheck[];
+
+        itemsToCheck.forEach(item => {
+            assert(item, {filter: {isSameOrderFirst: true}} as SimpleFuzzyFilterInitConfig<Note>);
         })
     });
 
