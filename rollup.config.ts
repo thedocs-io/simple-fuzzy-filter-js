@@ -7,7 +7,7 @@ import json from 'rollup-plugin-json'
 
 const pkg = require('./package.json')
 
-const libraryName = 'simple-fuzzy-filter-js'
+const libraryName = 'simple-fuzzy-filter'
 
 export default {
   input: `src/${libraryName}.ts`,

@@ -1,10 +1,10 @@
 {
-  "name": "@thedocs-io/simple-fuzzy-filter-js",
+  "name": "@thedocs-io/simple-fuzzy-filter",
   "version": "0.0.1",
   "description": "",
   "keywords": [],
-  "main": "dist/simple-fuzzy-filter-js.umd.js",
-  "module": "dist/simple-fuzzy-filter-js.es5.js",
+  "main": "dist/simple-fuzzy-filter.umd.js",
+  "module": "dist/simple-fuzzy-filter.es5.js",
   "typings": "dist/lib/index.d.ts",
   "files": [
     "dist"

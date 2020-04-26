@@ -1,4 +1,4 @@
-import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterInitConfig} from "../src/simple-fuzzy-filter-js"
+import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterInitConfig} from "../src/simple-fuzzy-filter"
 
 type Note = {
     key: string
@@ -44,7 +44,7 @@ describe("SimpleFuzzyFilter test", () => {
         const answer = filter.filter(query);
 
         expect(
-            query + ":" + answer.map(item => highlight(item.highlight) + ":" + item.isSameOrder).join(", ")
+            query + ":" + answer.map(item => highlight(item.highlight as SimpleFuzzyFilterHighlightItem[]) + ":" + item.isSameOrder).join(", ")
         ).toBe(
             query + ":" + dataSetToCheck.expect.map(item => item.highlight + ":" + ((item.isSameOrder == null) ? true : item.isSameOrder)).join(", ")
         );

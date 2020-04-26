@@ -1,11 +1,16 @@
 import 'core-js/features/array/for-each';
 import 'core-js/features/array/find';
 import {SimpleFuzzyFilterTokenizedItem, SimpleFuzzyFilterTokenizer} from "./simple-fuzzy-filter-tokenizer";
-import {SimpleFuzzyFilterItemTextProvider} from "./simple-fuzzy-filter-js";
+import {SimpleFuzzyFilterItemText, SimpleFuzzyFilterItemTextProvider} from "./simple-fuzzy-filter";
+
+export enum SimpleFuzzyFilterItemTextType {
+    SINGLE, ARRAY, OBJECT
+}
 
 export type SimpleFuzzyFilterItemData<T> = {
     item: T;
-    text: SimpleFuzzyFilterTokenizedItem[];
+    textTokenized: { [key: string]: SimpleFuzzyFilterTokenizedItem[] };
+    textType: SimpleFuzzyFilterItemTextType;
 }
 
 export class SimpleFuzzyFilterItemsIndex<T> {
@@ -56,9 +61,14 @@ export class SimpleFuzzyFilterItemsIndex<T> {
 
     add(item: T): void {
         if (this.items_) {
+            const textOriginal = this.textProvider(item);
+            const textType = this.getTextType(textOriginal);
+            const textTokenized = this.tokenize(textOriginal, textType);
+
             this.items_.push({
                 item: item,
-                text: this.tokenizer.tokenize(this.textProvider(item))
+                textTokenized: textTokenized,
+                textType: textType
             });
         } else {
             this.itemsCached.push(item);
@@ -95,5 +105,33 @@ export class SimpleFuzzyFilterItemsIndex<T> {
         this.itemsCached = [];
 
         return this.items_;
+    }
+
+    private getTextType(text: SimpleFuzzyFilterItemText): SimpleFuzzyFilterItemTextType {
+        if (Array.isArray(text)) {
+            return SimpleFuzzyFilterItemTextType.ARRAY;
+        } else if (typeof text === 'string' || text instanceof String) {
+            return SimpleFuzzyFilterItemTextType.SINGLE;
+        } else {
+            return SimpleFuzzyFilterItemTextType.OBJECT;
+        }
+    }
+
+    private tokenize(text: SimpleFuzzyFilterItemText, textType: SimpleFuzzyFilterItemTextType): { [key: string]: SimpleFuzzyFilterTokenizedItem[] } {
+        const answer: { [key: string]: SimpleFuzzyFilterTokenizedItem[] } = {};
+
+        if (textType == SimpleFuzzyFilterItemTextType.SINGLE) {
+            answer["a0"] = this.tokenizer.tokenize(text as string);
+        } else if (textType == SimpleFuzzyFilterItemTextType.ARRAY) {
+            (text as string[]).forEach((textItem, i) => {
+                answer["a" + i] = this.tokenizer.tokenize(textItem);
+            });
+        } else {
+            Object.keys(text as { [key: string]: string }).forEach(key => {
+                answer[key] = this.tokenizer.tokenize((text as { [key: string]: string })[key] as string);
+            });
+        }
+
+        return answer;
     }
 }

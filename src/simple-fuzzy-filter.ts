@@ -1,12 +1,13 @@
 import 'core-js/features/array/map';
 import 'core-js/features/array/for-each';
-import {SimpleFuzzyFilterTokenizer} from "./simple-fuzzy-filter-tokenizer";
-import {
-    SimpleFuzzyFilterItemData,
-    SimpleFuzzyFilterItemsIndex
-} from "./simple-fuzzy-filter-items-index";
+import {SimpleFuzzyFilterTokenizedItem, SimpleFuzzyFilterTokenizer} from "./simple-fuzzy-filter-tokenizer";
+import {SimpleFuzzyFilterItemData, SimpleFuzzyFilterItemsIndex, SimpleFuzzyFilterItemTextType} from "./simple-fuzzy-filter-items-index";
 
-export type SimpleFuzzyFilterItemTextProvider<T> = (item: T) => string;
+export type SimpleFuzzyFilterItemText = string | string[] | { [key: string]: string };
+
+export type SimpleFuzzyFilterItemTextProvider<T> = (item: T) => SimpleFuzzyFilterItemText;
+
+export type SimpleFuzzyFilterHighlightResult = SimpleFuzzyFilterHighlightItem[] | SimpleFuzzyFilterHighlightItem[][] | { [key: string]: SimpleFuzzyFilterHighlightItem[] };
 
 export type SimpleFuzzyFilterHighlightItem = {
     text: string;
@@ -15,7 +16,7 @@ export type SimpleFuzzyFilterHighlightItem = {
 
 export type SimpleFuzzyFilterMatchedItem<T> = {
     item: T;
-    highlight: SimpleFuzzyFilterHighlightItem[];
+    highlight: SimpleFuzzyFilterHighlightResult;
     isSameOrder: boolean
 }
 
@@ -105,13 +106,43 @@ export default class SimpleFuzzyFilter<T> {
     }
 
     private doFilterItem(item: SimpleFuzzyFilterItemData<T>, queryTokens: string[]): SimpleFuzzyFilterMatchedItem<T> | null {
+        let isAnyMatched = false;
+        let isAnySameOrder = false;
+        let highlight: { [key: string]: SimpleFuzzyFilterHighlightItem[] } = {};
+
+        Object.keys(item.textTokenized).forEach(key => {
+            const filterResult = this.doFilterItemTokenizedText(item.textTokenized[key], queryTokens);
+
+            if (filterResult.isMatched) {
+                isAnyMatched = true;
+            }
+
+            if (filterResult.isSameOrder) {
+                isAnySameOrder = true;
+            }
+
+            highlight[key] = filterResult.highlight;
+        });
+
+        if (isAnyMatched) {
+            return {
+                item: item.item,
+                isSameOrder: isAnySameOrder,
+                highlight: this.getHighlightResult(highlight, item.textType)
+            }
+        } else {
+            return null;
+        }
+    }
+
+    private doFilterItemTokenizedText(tokenizedText: SimpleFuzzyFilterTokenizedItem[], queryTokens: string[]): { isMatched: boolean, highlight: SimpleFuzzyFilterHighlightItem[], isSameOrder: boolean } {
         const highlight = [] as SimpleFuzzyFilterHighlightItem[];
         const queryTokensMatched = {} as { [token: string]: boolean };
         let currentText = "";
         let lastMatchedToken: string = "";
         let isSameOrder = true;
 
-        item.text.forEach(text => {
+        tokenizedText.forEach(text => {
             if (text.isToken) {
                 let isTokenMatched = false;
                 let tokenPrev: string = "";
@@ -175,12 +206,34 @@ export default class SimpleFuzzyFilter<T> {
 
         if (Object.keys(queryTokensMatched).length == queryTokens.length) {
             return {
-                item: item.item,
+                isMatched: true,
+                isSameOrder: isSameOrder,
                 highlight: highlight,
-                isSameOrder: isSameOrder
             };
         } else {
-            return null;
+            return {
+                isMatched: false,
+                isSameOrder: false,
+                highlight: [{text: tokenizedText.map(t => t.text).join(""), isMatched: false}]
+            };
+        }
+    }
+
+    private getHighlightResult(highlight: { [key: string]: SimpleFuzzyFilterHighlightItem[] }, textType: SimpleFuzzyFilterItemTextType): SimpleFuzzyFilterHighlightResult {
+        const keys = Object.keys(highlight);
+
+        if (textType == SimpleFuzzyFilterItemTextType.SINGLE) {
+            return highlight[keys[0]];
+        } else if (textType == SimpleFuzzyFilterItemTextType.ARRAY) {
+            return keys.map(key => highlight[key]);
+        } else {
+            const answer: { [key: string]: SimpleFuzzyFilterHighlightItem[] } = {};
+
+            keys.forEach(key => {
+                answer[key] = highlight[key];
+            });
+
+            return answer;
         }
     }
 }
