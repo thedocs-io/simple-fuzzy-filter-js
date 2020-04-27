@@ -128,11 +128,6 @@ describe("SimpleFuzzyFilter test", () => {
             },
             {
                 keys: ["helloWorld"],
-                query: "hel",
-                expect: [{highlight: "[hel]loWorld"}]
-            },
-            {
-                keys: ["helloWorld"],
                 query: "hello",
                 expect: [{highlight: "[hello]World"}]
             },
@@ -155,6 +150,11 @@ describe("SimpleFuzzyFilter test", () => {
                 keys: ["HELLO WORLD"],
                 query: "hel",
                 expect: [{highlight: "[HEL]LO WORLD"}]
+            },
+            {
+                keys: ["HELLO WORLD"],
+                query: "wo",
+                expect: [{highlight: "HELLO [WO]RLD"}]
             },
             {
                 keys: ["HELLO_WORLD"],

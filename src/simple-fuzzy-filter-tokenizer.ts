@@ -6,16 +6,16 @@ export type SimpleFuzzyFilterTokenizedItem = {
 export class SimpleFuzzyFilterTokenizer {
 
     private splitSymbols: string[];
-    private splitByCase: boolean;
+    private isSplitByCase: boolean;
 
-    constructor(splitSymbols?: string[], splitByCase?: boolean) {
+    constructor(splitSymbols?: string[], isSplitByCase?: boolean) {
         this.splitSymbols = splitSymbols || [" ", "\t", ".", "-", "_", ","];
-        this.splitByCase = splitByCase || true;
+        this.isSplitByCase = isSplitByCase || true;
     }
 
     tokenize(text: string): SimpleFuzzyFilterTokenizedItem[] {
         const answer = [] as SimpleFuzzyFilterTokenizedItem[];
-        const spittedText = text.split("");
+        const letters = text.split("");
         let currentToken = '';
         let prevTokenByCase = false;
 
@@ -26,18 +26,21 @@ export class SimpleFuzzyFilterTokenizer {
             });
         };
 
-        spittedText.forEach(letter => {
+        const saveSymbol = function (symbol: string) {
+            if (symbol) answer.push({
+                text: symbol,
+                isToken: false
+            });
+        };
+
+        letters.forEach(letter => {
             if (this.splitSymbols.indexOf(letter) != -1) {
                 saveToken(currentToken);
+                saveSymbol(letter);
+
                 currentToken = "";
-
-                answer.push({
-                    text: letter,
-                    isToken: false
-                });
-
                 prevTokenByCase = false;
-            } else if (this.splitByCase && letter.toUpperCase() == letter) {
+            } else if (this.isSplitByCase && letter.toUpperCase() == letter) {
                 if (prevTokenByCase) {
                     currentToken += letter;
                 } else {
