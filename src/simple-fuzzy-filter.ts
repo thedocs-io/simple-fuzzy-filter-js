@@ -7,7 +7,9 @@ export type SimpleFuzzyFilterItemText = string | string[] | { [key: string]: str
 
 export type SimpleFuzzyFilterItemTextProvider<T> = (item: T) => SimpleFuzzyFilterItemText;
 
-export type SimpleFuzzyFilterHighlightResult = SimpleFuzzyFilterHighlightItem[] | SimpleFuzzyFilterHighlightItem[][] | { [key: string]: SimpleFuzzyFilterHighlightItem[] };
+export type SimpleFuzzyFilterHighlightResultObject = { [key: string]: SimpleFuzzyFilterHighlightItem[] };
+
+export type SimpleFuzzyFilterHighlightResult = SimpleFuzzyFilterHighlightItem[] | SimpleFuzzyFilterHighlightItem[][] | SimpleFuzzyFilterHighlightResultObject;
 
 export type SimpleFuzzyFilterHighlightItem = {
     text: string;
@@ -106,25 +108,29 @@ export default class SimpleFuzzyFilter<T> {
     }
 
     private doFilterItem(item: SimpleFuzzyFilterItemData<T>, queryTokens: string[]): SimpleFuzzyFilterMatchedItem<T> | null {
-        let isAnyMatched = false;
+        const queryTokensMatched: { [token: string]: boolean } = {};
+        const queryTokensLength = queryTokens.length;
+
         let isAnySameOrder = false;
         let highlight: { [key: string]: SimpleFuzzyFilterHighlightItem[] } = {};
 
         Object.keys(item.textTokenized).forEach(key => {
             const filterResult = this.doFilterItemTokenizedText(item.textTokenized[key], queryTokens);
+            let queryTokensMatchedCount = 0;
 
-            if (filterResult.isMatched) {
-                isAnyMatched = true;
-            }
+            filterResult.queryTokensMatched.forEach(token => {
+                queryTokensMatched[token] = true;
+                queryTokensMatchedCount++;
+            });
 
-            if (filterResult.isSameOrder) {
+            if (filterResult.isSameOrder && queryTokensLength == queryTokensMatchedCount) {
                 isAnySameOrder = true;
             }
 
             highlight[key] = filterResult.highlight;
         });
 
-        if (isAnyMatched) {
+        if (Object.keys(queryTokensMatched).length == queryTokensLength) {
             return {
                 item: item.item,
                 isSameOrder: isAnySameOrder,
@@ -135,7 +141,7 @@ export default class SimpleFuzzyFilter<T> {
         }
     }
 
-    private doFilterItemTokenizedText(tokenizedText: SimpleFuzzyFilterTokenizedItem[], queryTokens: string[]): { isMatched: boolean, highlight: SimpleFuzzyFilterHighlightItem[], isSameOrder: boolean } {
+    private doFilterItemTokenizedText(tokenizedText: SimpleFuzzyFilterTokenizedItem[], queryTokens: string[]): { queryTokensMatched: string[], highlight: SimpleFuzzyFilterHighlightItem[], isSameOrder: boolean } {
         const highlight = [] as SimpleFuzzyFilterHighlightItem[];
         const queryTokensMatched = {} as { [token: string]: boolean };
         let currentText = "";
@@ -204,19 +210,11 @@ export default class SimpleFuzzyFilter<T> {
             });
         }
 
-        if (Object.keys(queryTokensMatched).length == queryTokens.length) {
-            return {
-                isMatched: true,
-                isSameOrder: isSameOrder,
-                highlight: highlight,
-            };
-        } else {
-            return {
-                isMatched: false,
-                isSameOrder: false,
-                highlight: [{text: tokenizedText.map(t => t.text).join(""), isMatched: false}]
-            };
-        }
+        return {
+            queryTokensMatched: Object.keys(queryTokensMatched),
+            isSameOrder: isSameOrder,
+            highlight: highlight,
+        };
     }
 
     private getHighlightResult(highlight: { [key: string]: SimpleFuzzyFilterHighlightItem[] }, textType: SimpleFuzzyFilterItemTextType): SimpleFuzzyFilterHighlightResult {

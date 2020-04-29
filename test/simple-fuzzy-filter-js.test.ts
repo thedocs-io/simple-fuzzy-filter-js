@@ -1,10 +1,20 @@
-import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterInitConfig} from "../src/simple-fuzzy-filter"
+import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterHighlightResultObject, SimpleFuzzyFilterInitConfig} from "../src/simple-fuzzy-filter"
 
 type Note = {
     key: string
+    description: string;
 }
 
-type DataSetToCheck = {
+type DataObjectSetToCheck = {
+    notes: Note[],
+    query: string,
+    expect: {
+        highlight: string,
+        isSameOrder?: boolean
+    }[]
+}
+
+type DataSimpleSetToCheck = {
     keys: string[],
     query: string,
     expect: {
@@ -15,7 +25,45 @@ type DataSetToCheck = {
 
 describe("SimpleFuzzyFilter test", () => {
 
-    const assert = (dataSetToCheck: DataSetToCheck, config?: SimpleFuzzyFilterInitConfig<Note>) => {
+    const highlight = (items: SimpleFuzzyFilterHighlightItem[]) => {
+        let answer = "";
+
+        items.forEach(item => {
+            if (item.isMatched) {
+                answer += "[" + item.text + "]";
+            } else {
+                answer += item.text;
+            }
+        });
+
+        return answer;
+    };
+
+    const highlightObject = (items: SimpleFuzzyFilterHighlightResultObject, keys: string[]) => {
+        return keys.map(key => highlight(items[key])).join("||");
+    };
+
+    const assertObject = (dataSetToCheck: DataObjectSetToCheck, config?: SimpleFuzzyFilterInitConfig<Note>) => {
+        const notes = dataSetToCheck.notes;
+
+        config = config || {} as SimpleFuzzyFilterInitConfig<Note>;
+        config.items = notes;
+        config.textProvider = item =>  {
+            return {"key": item.key, "description": item.description};
+        };
+
+        const filter = new SimpleFuzzyFilter<Note>(config);
+        const query = dataSetToCheck.query;
+        const answer = filter.filter(query);
+
+        expect(
+            query + ":" + answer.map(item => highlightObject(item.highlight as SimpleFuzzyFilterHighlightResultObject, ["key", "description"]) + ":" + item.isSameOrder).join(", ")
+        ).toBe(
+            query + ":" + dataSetToCheck.expect.map(item => item.highlight + ":" + ((item.isSameOrder == null) ? true : item.isSameOrder)).join(", ")
+        );
+    };
+
+    const assert = (dataSetToCheck: DataSimpleSetToCheck, config?: SimpleFuzzyFilterInitConfig<Note>) => {
         const notes = dataSetToCheck.keys.map(key => {
             return {key: key}
         }) as Note[];
@@ -25,21 +73,6 @@ describe("SimpleFuzzyFilter test", () => {
         config.textProvider = item => item.key;
 
         const filter = new SimpleFuzzyFilter<Note>(config);
-
-        const highlight = (items: SimpleFuzzyFilterHighlightItem[]) => {
-            let answer = "";
-
-            items.forEach(item => {
-                if (item.isMatched) {
-                    answer += "[" + item.text + "]";
-                } else {
-                    answer += item.text;
-                }
-            });
-
-            return answer;
-        };
-
         const query = dataSetToCheck.query;
         const answer = filter.filter(query);
 
@@ -97,7 +130,7 @@ describe("SimpleFuzzyFilter test", () => {
                 query: "ello world",
                 expect: []
             },
-        ] as DataSetToCheck[];
+        ] as DataSimpleSetToCheck[];
 
         itemsToCheck.forEach(item => {
             assert(item);
@@ -176,7 +209,7 @@ describe("SimpleFuzzyFilter test", () => {
                 query: "HELLO",
                 expect: [{highlight: "[hello]World"}]
             },
-        ] as DataSetToCheck[];
+        ] as DataSimpleSetToCheck[];
 
         itemsToCheck.forEach(item => {
             assert(item);
@@ -276,7 +309,7 @@ describe("SimpleFuzzyFilter test", () => {
                 query: "World-aga_HELLO",
                 expect: [{highlight: "[HELLO]_[World]_[aga]in", isSameOrder: false}]
             },
-        ] as DataSetToCheck[];
+        ] as DataSimpleSetToCheck[];
 
         itemsToCheck.forEach(item => {
             assert(item);
@@ -310,7 +343,7 @@ describe("SimpleFuzzyFilter test", () => {
                 query: "plan, hello",
                 expect: [{highlight: "[plan]et earth, [hello]"}, {highlight: "[hello] [plan]et mars", isSameOrder: false}]
             }
-        ] as DataSetToCheck[];
+        ] as DataSimpleSetToCheck[];
 
         itemsToCheck.forEach(item => {
             assert(item, {filter: {isSameOrderFirst: true}} as SimpleFuzzyFilterInitConfig<Note>);
@@ -324,10 +357,64 @@ describe("SimpleFuzzyFilter test", () => {
                 query: "hel wor",
                 expect: [{highlight: "[hel]lo [wor]ld again"}]
             },
-        ] as DataSetToCheck[];
+        ] as DataSimpleSetToCheck[];
 
         itemsToCheck.forEach(item => {
             assert(item);
+        })
+    });
+
+    it("query not matches: object", () => {
+        const itemsToCheck = [
+            {
+                notes: [{key: "hello world", description: "again"}],
+                query: "hel simple",
+                expect: []
+            },
+            {
+                notes: [{key: "hello world", description: "again"}],
+                query: "worldagain",
+                expect: []
+            },
+            {
+                notes: [{key: "hello world", description: "again"}],
+                query: "g",
+                expect: []
+            },
+        ] as DataObjectSetToCheck[];
+
+        itemsToCheck.forEach(item => {
+            assertObject(item);
+        })
+    });
+
+
+    it("query matches: object match", () => {
+        const itemsToCheck = [
+            {
+                notes: [{key: "hello world", description: "again"}],
+                query: "hel wor",
+                expect: [{highlight: "[hel]lo [wor]ld||again"}]
+            },
+            {
+                notes: [{key: "hello world", description: "again"}],
+                query: "AGA",
+                expect: [{highlight: "hello world||[aga]in"}]
+            },
+            {
+                notes: [{key: "hello world", description: "again"}],
+                query: "wor hel",
+                expect: [{highlight: "[hel]lo [wor]ld||again", isSameOrder: false}]
+            },
+            {
+                notes: [{key: "hello world", description: "again"}],
+                query: "hel again",
+                expect: [{highlight: "[hel]lo world||[again]", isSameOrder: false}]
+            },
+        ] as DataObjectSetToCheck[];
+
+        itemsToCheck.forEach(item => {
+            assertObject(item);
         })
     });
 
