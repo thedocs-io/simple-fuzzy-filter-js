@@ -2,25 +2,11 @@ import 'core-js/features/array/map';
 import 'core-js/features/array/for-each';
 import {SimpleFuzzyFilterTokenizedItem, SimpleFuzzyFilterTokenizer} from "./simple-fuzzy-filter-tokenizer";
 import {SimpleFuzzyFilterItemData, SimpleFuzzyFilterItemsIndex, SimpleFuzzyFilterItemTextType} from "./simple-fuzzy-filter-items-index";
+import {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterHighlightResult, SimpleFuzzyFilterMatchedItem} from "./simple-fuzzy-filter-result";
 
 export type SimpleFuzzyFilterItemText = string | string[] | { [key: string]: string };
 
 export type SimpleFuzzyFilterItemTextProvider<T> = (item: T) => SimpleFuzzyFilterItemText;
-
-export type SimpleFuzzyFilterHighlightResultObject = { [key: string]: SimpleFuzzyFilterHighlightItem[] };
-
-export type SimpleFuzzyFilterHighlightResult = SimpleFuzzyFilterHighlightItem[] | SimpleFuzzyFilterHighlightItem[][] | SimpleFuzzyFilterHighlightResultObject;
-
-export type SimpleFuzzyFilterHighlightItem = {
-    text: string;
-    isMatched: boolean;
-}
-
-export type SimpleFuzzyFilterMatchedItem<T> = {
-    item: T;
-    highlight: SimpleFuzzyFilterHighlightResult;
-    isSameOrder: boolean
-}
 
 export type SimpleFuzzyFilterInitConfig<T> = {
     textProvider: SimpleFuzzyFilterItemTextProvider<T>,
@@ -221,9 +207,9 @@ export default class SimpleFuzzyFilter<T> {
         const keys = Object.keys(highlight);
 
         if (textType == SimpleFuzzyFilterItemTextType.SINGLE) {
-            return highlight[keys[0]];
-        } else if (textType == SimpleFuzzyFilterItemTextType.ARRAY) {
-            return keys.map(key => highlight[key]);
+            return new SimpleFuzzyFilterHighlightResult(highlight[keys[0]], null, null);
+        } else if (textType == SimpleFuzzyFilterItemTextType.LIST) {
+            return new SimpleFuzzyFilterHighlightResult(highlight[keys[0]], keys.map(key => highlight[key]), null);
         } else {
             const answer: { [key: string]: SimpleFuzzyFilterHighlightItem[] } = {};
 
@@ -231,7 +217,7 @@ export default class SimpleFuzzyFilter<T> {
                 answer[key] = highlight[key];
             });
 
-            return answer;
+            return new SimpleFuzzyFilterHighlightResult(highlight[keys[0]], null, answer);
         }
     }
 }

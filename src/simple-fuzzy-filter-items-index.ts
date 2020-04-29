@@ -4,7 +4,7 @@ import {SimpleFuzzyFilterTokenizedItem, SimpleFuzzyFilterTokenizer} from "./simp
 import {SimpleFuzzyFilterItemText, SimpleFuzzyFilterItemTextProvider} from "./simple-fuzzy-filter";
 
 export enum SimpleFuzzyFilterItemTextType {
-    SINGLE, ARRAY, OBJECT
+    SINGLE, LIST, MAP
 }
 
 export type SimpleFuzzyFilterItemData<T> = {
@@ -109,11 +109,11 @@ export class SimpleFuzzyFilterItemsIndex<T> {
 
     private getTextType(text: SimpleFuzzyFilterItemText): SimpleFuzzyFilterItemTextType {
         if (Array.isArray(text)) {
-            return SimpleFuzzyFilterItemTextType.ARRAY;
+            return SimpleFuzzyFilterItemTextType.LIST;
         } else if (typeof text === 'string' || text instanceof String) {
             return SimpleFuzzyFilterItemTextType.SINGLE;
         } else {
-            return SimpleFuzzyFilterItemTextType.OBJECT;
+            return SimpleFuzzyFilterItemTextType.MAP;
         }
     }
 
@@ -122,7 +122,7 @@ export class SimpleFuzzyFilterItemsIndex<T> {
 
         if (textType == SimpleFuzzyFilterItemTextType.SINGLE) {
             answer["a0"] = this.tokenizer.tokenize(text as string);
-        } else if (textType == SimpleFuzzyFilterItemTextType.ARRAY) {
+        } else if (textType == SimpleFuzzyFilterItemTextType.LIST) {
             (text as string[]).forEach((textItem, i) => {
                 answer["a" + i] = this.tokenizer.tokenize(textItem);
             });

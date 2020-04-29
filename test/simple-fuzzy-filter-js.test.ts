@@ -1,4 +1,5 @@
-import SimpleFuzzyFilter, {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterHighlightResultObject, SimpleFuzzyFilterInitConfig} from "../src/simple-fuzzy-filter"
+import SimpleFuzzyFilter, {SimpleFuzzyFilterInitConfig} from "../src/simple-fuzzy-filter"
+import {SimpleFuzzyFilterHighlightItem, SimpleFuzzyFilterHighlightResultMap} from "../src/simple-fuzzy-filter-result";
 
 type Note = {
     key: string
@@ -39,7 +40,7 @@ describe("SimpleFuzzyFilter test", () => {
         return answer;
     };
 
-    const highlightObject = (items: SimpleFuzzyFilterHighlightResultObject, keys: string[]) => {
+    const highlightObject = (items: SimpleFuzzyFilterHighlightResultMap, keys: string[]) => {
         return keys.map(key => highlight(items[key])).join("||");
     };
 
@@ -57,7 +58,7 @@ describe("SimpleFuzzyFilter test", () => {
         const answer = filter.filter(query);
 
         expect(
-            query + ":" + answer.map(item => highlightObject(item.highlight as SimpleFuzzyFilterHighlightResultObject, ["key", "description"]) + ":" + item.isSameOrder).join(", ")
+            query + ":" + answer.map(item => highlightObject(item.highlight.map, ["key", "description"]) + ":" + item.isSameOrder).join(", ")
         ).toBe(
             query + ":" + dataSetToCheck.expect.map(item => item.highlight + ":" + ((item.isSameOrder == null) ? true : item.isSameOrder)).join(", ")
         );
@@ -77,7 +78,7 @@ describe("SimpleFuzzyFilter test", () => {
         const answer = filter.filter(query);
 
         expect(
-            query + ":" + answer.map(item => highlight(item.highlight as SimpleFuzzyFilterHighlightItem[]) + ":" + item.isSameOrder).join(", ")
+            query + ":" + answer.map(item => highlight(item.highlight.single) + ":" + item.isSameOrder).join(", ")
         ).toBe(
             query + ":" + dataSetToCheck.expect.map(item => item.highlight + ":" + ((item.isSameOrder == null) ? true : item.isSameOrder)).join(", ")
         );
