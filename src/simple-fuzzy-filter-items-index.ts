@@ -99,7 +99,7 @@ export class SimpleFuzzyFilterItemsIndex<T> {
         items.forEach(item => this.remove(item));
     }
 
-    initIndex(): SimpleFuzzyFilterItemData<T>[] {
+    private initIndex(): SimpleFuzzyFilterItemData<T>[] {
         this.items_ = [];
         this.itemsCached.forEach(item => this.add(item));
         this.itemsCached = [];
