@@ -209,7 +209,7 @@ export default class SimpleFuzzyFilter<T> {
         if (textType == SimpleFuzzyFilterItemTextType.SINGLE) {
             return new SimpleFuzzyFilterHighlightResult(highlight[keys[0]], null, null);
         } else if (textType == SimpleFuzzyFilterItemTextType.LIST) {
-            return new SimpleFuzzyFilterHighlightResult(highlight[keys[0]], keys.map(key => highlight[key]), null);
+            return new SimpleFuzzyFilterHighlightResult(null, keys.map(key => highlight[key]), null);
         } else {
             const answer: { [key: string]: SimpleFuzzyFilterHighlightItem[] } = {};
 
@@ -217,7 +217,7 @@ export default class SimpleFuzzyFilter<T> {
                 answer[key] = highlight[key];
             });
 
-            return new SimpleFuzzyFilterHighlightResult(highlight[keys[0]], null, answer);
+            return new SimpleFuzzyFilterHighlightResult(null, null, answer);
         }
     }
 }
