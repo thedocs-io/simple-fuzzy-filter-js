@@ -398,6 +398,11 @@ describe("SimpleFuzzyFilter test", () => {
                 expect: [{highlight: "[hel]lo [wor]ld||again"}]
             },
             {
+                notes: [{key: "hello world", description: null}],
+                query: "hel wor",
+                expect: [{highlight: "[hel]lo [wor]ld||"}]
+            },
+            {
                 notes: [{key: "hello world", description: "again"}],
                 query: "AGA",
                 expect: [{highlight: "hello world||[aga]in"}]

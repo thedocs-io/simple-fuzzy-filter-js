@@ -15,7 +15,7 @@ export class SimpleFuzzyFilterTokenizer {
 
     tokenize(text: string): SimpleFuzzyFilterTokenizedItem[] {
         const answer = [] as SimpleFuzzyFilterTokenizedItem[];
-        const letters = text.split("");
+        const letters = (text || "").split("");
         let currentToken = '';
         let prevTokenByCase = false;
 
